@@ -156,6 +156,11 @@
     .ach-chip .ach-ico { font-size: 14px; }
 
     .cal-btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 10px; border-radius: 10px; cursor: pointer; color: var(--text); }
+    .table-foot { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 11px 14px; border-top: 1px solid var(--card-border); }
+    .table-foot.hidden { display: none; }
+    .table-foot button { padding: 6px 12px; border-radius: 9px; font-size: 13px; line-height: 1; }
+    .table-foot button:disabled { opacity: .35; cursor: default; }
+    .table-foot span { font-size: 12px; color: var(--muted); font-weight: 650; white-space: nowrap; }
     .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .cal-head strong { font-size: 14px; }
     .cal-nav { width: 32px; height: 32px; border-radius: 8px; padding: 0; }
@@ -655,7 +660,12 @@
       .chart-selects select { flex: 1; min-width: 120px; }
       .stats { grid-template-columns: 1fr 1fr; }
       .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      table { min-width: 900px; }
+      table { min-width: 0; }
+      .col-macro, .col-resting, .col-extra { display: none; }
+      th, td { padding: 9px 6px; }
+      th:first-child, td:first-child { padding-left: 12px; }
+      th:last-child, td:last-child { padding-right: 12px; }
+      td input { min-width: 0; padding: 7px 6px; }
       .chart-head { display: block; }
       .legend { justify-content: flex-start; margin-top: 10px; }
       .profile-wrap { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
@@ -749,20 +759,25 @@
               <th>Day</th>
               <th class="meal-col" aria-label="Meals"></th>
               <th>Calories eaten</th>
-              <th>Protein g</th>
-              <th>Carbs g</th>
-              <th>Fat g</th>
+              <th class="col-macro">Protein g</th>
+              <th class="col-macro">Carbs g</th>
+              <th class="col-macro">Fat g</th>
               <th>Active cals</th>
               <th>Steps</th>
               <th>Weight kg</th>
-              <th>Chart weight</th>
-              <th>Resting burn</th>
+              <th class="col-extra">Chart weight</th>
+              <th class="col-resting">Resting burn</th>
               <th>Total burn</th>
               <th>Deficit</th>
             </tr>
           </thead>
           <tbody id="dailyRows"></tbody>
         </table>
+      </div>
+      <div class="table-foot hidden" id="tablePager">
+        <button id="tablePrev" type="button" title="Older 7 days" aria-label="Older">◀</button>
+        <span id="tablePageLabel"></span>
+        <button id="tableNext" type="button" title="Newer 7 days" aria-label="Newer">▶</button>
       </div>
     </section>
 
@@ -933,6 +948,10 @@
       panelDates: document.getElementById("panelDates"),
       asideTitle: document.getElementById("asideTitle"),
       dailyRows: document.getElementById("dailyRows"),
+      tablePager: document.getElementById("tablePager"),
+      tablePrev: document.getElementById("tablePrev"),
+      tableNext: document.getElementById("tableNext"),
+      tablePageLabel: document.getElementById("tablePageLabel"),
       chart: document.getElementById("chart"),
       chartTitle: document.getElementById("chartTitle"),
       chartNote: document.getElementById("chartNote"),
@@ -1073,6 +1092,8 @@
       [els.goalLoss, els.goalSteps, els.goalWeight].forEach(i => i.addEventListener("input", updateSettingsAndRefresh));
       els.chartType.addEventListener("change", render);
       els.reportRange.addEventListener("change", render);
+      els.tablePrev.addEventListener("click", () => { tablePage++; render(); });
+      els.tableNext.addEventListener("click", () => { tablePage--; render(); });
       els.calBtn.addEventListener("click", openDates);
       els.calPrev.addEventListener("click", () => { calView.setMonth(calView.getMonth() - 1); renderCal(); });
       els.calNext.addEventListener("click", () => { calView.setMonth(calView.getMonth() + 1); renderCal(); });
@@ -1875,11 +1896,28 @@
       return out;
     }
 
+    // Paginate the daily table 7 rows at a time; footer only shows when there are more.
+    let tablePage = 0, tablePages = 1, tableRangeKey = "";
+    function tablePageRows(rows) {
+      const key = els.reportRange.value + "|" + (customStart || "") + "|" + (customEnd || "");
+      if (key !== tableRangeKey) { tableRangeKey = key; tablePage = 0; }
+      if (rows.length <= 7) { els.tablePager.classList.add("hidden"); tablePages = 1; tablePage = 0; return rows; }
+      tablePages = Math.ceil(rows.length / 7);
+      tablePage = Math.max(0, Math.min(tablePage, tablePages - 1));
+      const end = rows.length - tablePage * 7;
+      const page = rows.slice(Math.max(0, end - 7), end);
+      els.tablePager.classList.remove("hidden");
+      els.tablePageLabel.textContent = `${page[0].label} – ${page[page.length - 1].label}`;
+      els.tablePrev.disabled = tablePage >= tablePages - 1;   // older
+      els.tableNext.disabled = tablePage <= 0;                // newer
+      return page;
+    }
+
     function render() {
       const dates = rangeDates();
       els.asideTitle.textContent = rangeLabel();
       const rows = dates.map(rowData);
-      renderTable(rows);
+      renderTable(tablePageRows(rows));
       renderStats(rows);
       renderMacros(rows);
       renderChart();
@@ -1948,14 +1986,14 @@
           <td class="day"><button type="button" class="day-btn" data-date="${r.date}" title="View meals">${r.label}</button></td>
           <td class="meal-col"><button type="button" class="add-meal" data-date="${r.date}" title="Meals" aria-label="Meals"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M2.5 10C2.5 6 7 4 12 4s9.5 2 9.5 6Z"/><rect x="2.5" y="10.9" width="19" height="2.8" rx="1.4"/><path d="M3.2 15h17.6c0 2.6-3.8 4.2-8.8 4.2S3.2 17.6 3.2 15Z"/></svg></button></td>
           <td><button type="button" class="day-btn intake-btn" data-date="${r.date}" title="From meals — click to edit">${r.intake != null ? fmt(r.intake) : "—"}</button></td>
-          <td><span class="muted-cell">${r.protein != null ? fmt(r.protein) : ""}</span></td>
-          <td><span class="muted-cell">${r.carbs != null ? fmt(r.carbs) : ""}</span></td>
-          <td><span class="muted-cell">${r.fat != null ? fmt(r.fat) : ""}</span></td>
+          <td class="col-macro"><span class="muted-cell">${r.protein != null ? fmt(r.protein) : ""}</span></td>
+          <td class="col-macro"><span class="muted-cell">${r.carbs != null ? fmt(r.carbs) : ""}</span></td>
+          <td class="col-macro"><span class="muted-cell">${r.fat != null ? fmt(r.fat) : ""}</span></td>
           <td>${inputHtml(r.date, "active", r.active, "1", r.activeEstimated ? "~" + r.activeFromSteps : "")}</td>
           <td>${inputHtml(r.date, "steps", r.steps, "1")}</td>
           <td>${inputHtml(r.date, "weight", r.enteredWeight, "0.1")}</td>
-          <td><span class="weight-used" data-calc="chartWeight" data-date="${r.date}">${weightLabel(r)}</span></td>
-          <td><span data-calc="restingBurn" data-date="${r.date}">${fmt(r.restingBurn)}</span></td>
+          <td class="col-extra"><span class="weight-used" data-calc="chartWeight" data-date="${r.date}">${weightLabel(r)}</span></td>
+          <td class="col-resting"><span data-calc="restingBurn" data-date="${r.date}">${fmt(r.restingBurn)}</span></td>
           <td><span data-calc="totalBurn" data-date="${r.date}">${fmt(r.totalBurn)}</span></td>
           <td><span data-calc="deficit" data-date="${r.date}" class="${r.deficit >= 0 ? "good" : "bad"}">${fmt(r.deficit)}</span></td>
         `;
@@ -2206,7 +2244,7 @@
       }
 
       function drawRings() {
-        els.chartNote.textContent = "Goal rings" + (range === "today" ? " · today" : " · avg/day");
+        els.chartNote.textContent = "Goal rings" + (dates.length === 1 ? "" : " · avg/day");
         const SVGNS = "http://www.w3.org/2000/svg";
         const mean = key => { const vs = data.map(b => b[key]).filter(v => v != null && Number.isFinite(v)); return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null; };
         const t = macroTargets();
@@ -2215,35 +2253,41 @@
           { label: "Steps", val: mean("steps"), target: num(state.settings.stepsGoal, 0) || null, unit: "", color: "var(--burn)" },
           { label: "Protein", val: mean("protein"), target: t.protein, unit: "g", color: "var(--intake)" }
         ];
-        setLegend(rings.map(r => swatch(r.color, r.label)).join(""));
+        setLegend("");
         const circle = (cx, cy, rr, stroke, w) => { const c = document.createElementNS(SVGNS, "circle"); c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", rr); c.setAttribute("fill", "none"); c.setAttribute("stroke", stroke); c.setAttribute("stroke-width", w); return c; };
-        const r = 78, sw = 18, C = 2 * Math.PI * r, cy = m.top + ih / 2 - 24;
+        const dot = (x, y, rr, fill) => { const c = document.createElementNS(SVGNS, "circle"); c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", rr); c.setAttribute("fill", fill); return c; };
+        // Concentric Apple-Watch-style rings: outer = Deficit, middle = Steps, inner = Protein.
+        const cx = m.left + 150, cyc = m.top + ih / 2, sw = 22, gap = 8;
         rings.forEach((ring, i) => {
-          const cx = m.left + iw * (i + 0.5) / 3;
-          svg.appendChild(circle(cx, cy, r, col.grid, sw));
+          const rad = 140 - i * (sw + gap), C = 2 * Math.PI * rad;
+          const track = circle(cx, cyc, rad, ring.color, sw); track.setAttribute("stroke-opacity", "0.16"); svg.appendChild(track);
           const has = ring.val != null && ring.target;
           const frac = has ? Math.max(0, Math.min(1, ring.val / ring.target)) : 0;
-          const pct = has ? Math.round(ring.val / ring.target * 100) : null;
           if (has && frac > 0) {
             const off = C * (1 - frac);
-            const arc = circle(cx, cy, r, pct >= 100 ? "var(--good)" : ring.color, sw);
+            const arc = circle(cx, cyc, rad, ring.color, sw);
             arc.setAttribute("stroke-linecap", "round");
             arc.setAttribute("stroke-dasharray", C);
             arc.setAttribute("stroke-dashoffset", off);
-            arc.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
+            arc.setAttribute("transform", `rotate(-90 ${cx} ${cyc})`);
             const an = document.createElementNS(SVGNS, "animate");
-            an.setAttribute("attributeName", "stroke-dashoffset");
-            an.setAttribute("from", C); an.setAttribute("to", off);
-            an.setAttribute("dur", "0.8s"); an.setAttribute("fill", "freeze");
-            an.setAttribute("calcMode", "spline"); an.setAttribute("keyTimes", "0;1"); an.setAttribute("keySplines", "0.2 0.7 0.2 1");
-            arc.appendChild(an);
-            svg.appendChild(arc);
+            an.setAttribute("attributeName", "stroke-dashoffset"); an.setAttribute("from", C); an.setAttribute("to", off);
+            an.setAttribute("dur", "0.9s"); an.setAttribute("fill", "freeze"); an.setAttribute("calcMode", "spline"); an.setAttribute("keyTimes", "0;1"); an.setAttribute("keySplines", "0.2 0.7 0.2 1");
+            arc.appendChild(an); svg.appendChild(arc);
           }
-          svg.appendChild(text(cx, cy + 11, pct != null ? pct + "%" : "—", "middle", "32", col.text, "800"));
-          svg.appendChild(text(cx, cy + r + 28, ring.label, "middle", "14", col.text, "700"));
+        });
+        // Stats legend on the right
+        const lx = cx + 140 + 36;
+        rings.forEach((ring, i) => {
+          const y = cyc - 58 + i * 58;
+          const has = ring.val != null && ring.target;
+          const pct = has ? Math.round(ring.val / ring.target * 100) : null;
+          svg.appendChild(dot(lx + 6, y - 5, 7, ring.color));
+          svg.appendChild(text(lx + 22, y, ring.label, "start", "15", col.text, "700"));
+          svg.appendChild(text(W - m.right, y, pct != null ? pct + "%" : "—", "end", "20", col.text, "800"));
           const sub = has ? `${fmt(Math.round(ring.val))} / ${fmt(Math.round(ring.target))}${ring.unit ? " " + ring.unit : ""}`
             : (ring.target ? "no data" : "set a goal");
-          svg.appendChild(text(cx, cy + r + 48, sub, "middle", "12", col.muted));
+          svg.appendChild(text(lx + 22, y + 19, sub, "start", "12", col.muted));
         });
       }
 
