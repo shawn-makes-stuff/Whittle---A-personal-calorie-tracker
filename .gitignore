@@ -1,0 +1,7 @@
+node_modules/
+tracker.db
+tracker.db-wal
+tracker.db-shm
+ai-config.json
+start-hidden.vbs
+check_tmp.js
