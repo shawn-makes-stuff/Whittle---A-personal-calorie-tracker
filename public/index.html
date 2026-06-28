@@ -2261,7 +2261,6 @@
         ];
         setLegend("");
         const circle = (cx, cy, rr, stroke, w) => { const c = document.createElementNS(SVGNS, "circle"); c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", rr); c.setAttribute("fill", "none"); c.setAttribute("stroke", stroke); c.setAttribute("stroke-width", w); return c; };
-        const dot = (x, y, rr, fill) => { const c = document.createElementNS(SVGNS, "circle"); c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", rr); c.setAttribute("fill", fill); return c; };
         // Concentric Apple-Watch-style rings, centered: outer = Deficit, middle = Steps, inner = Protein.
         const cx = W / 2, cyc = m.top + 150, sw = 26, gap = 9, outer = 142;
         rings.forEach((ring, i) => {
@@ -2285,8 +2284,13 @@
           if (has && raw > 0) mkArc(Math.min(1, raw));
           if (has && over > 0.002) {                  // overshoot end laps over the start
             mkArc(over);
-            const td = (-90 + over * 360) * Math.PI / 180;     // shadow only the leading end
-            const cap = dot(cx + rad * Math.cos(td), cyc + rad * Math.sin(td), sw / 2, ring.color);
+            // Shadow only the leading end: a half-disc cap following the curve (reads as one end overlapping).
+            const td = (-90 + over * 360) * Math.PI / 180, r2 = sw / 2;
+            const tx = cx + rad * Math.cos(td), ty = cyc + rad * Math.sin(td);
+            const ux = Math.cos(td), uy = Math.sin(td);
+            const cap = document.createElementNS(SVGNS, "path");
+            cap.setAttribute("d", `M ${tx + ux * r2} ${ty + uy * r2} A ${r2} ${r2} 0 0 1 ${tx - ux * r2} ${ty - uy * r2} Z`);
+            cap.setAttribute("fill", ring.color);
             cap.style.filter = "drop-shadow(0 2px 3px rgba(0,0,0,.65))";
             svg.appendChild(cap);
           }
