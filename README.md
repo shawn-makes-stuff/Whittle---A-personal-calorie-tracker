@@ -1,6 +1,6 @@
-# Calorie Tracker
+# Whittle
 
-A local, private weekly calorie + macro tracker that runs as a small desktop app
+**Whittle it down.** A local, private weekly calorie + macro tracker that runs as a small desktop app
 (system-tray + browser/PWA window). Food is logged as meals (by you or an AI
 assistant), and intake/macros are derived from them. The AI runs through a CLI you
 already have installed (Claude, Codex, or Gemini) — **no API keys, no extra billing**.
@@ -33,8 +33,8 @@ Works on **Windows, Linux, and macOS** and in **any modern browser**.
 ## Setup
 
 ```bash
-git clone <your-repo-url> calorie-tracker
-cd calorie-tracker
+git clone <your-repo-url> whittle
+cd whittle
 npm install
 npm start
 ```

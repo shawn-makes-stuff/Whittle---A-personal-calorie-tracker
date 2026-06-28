@@ -58,7 +58,7 @@ const items = [
 ];
 
 const systray = new SysTray({
-  menu: { icon, isTemplateIcon: false, title: '', tooltip: 'Calorie Tracker', items },
+  menu: { icon, isTemplateIcon: false, title: '', tooltip: 'Whittle', items },
   debug: false,
   copyDir: true
 });

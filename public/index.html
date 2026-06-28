@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Weekly Calorie Tracker</title>
+  <title>The Calorie Trend Tracker</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="alternate icon" href="/favicon.ico" sizes="any" />
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -50,7 +50,6 @@
       --hatch: rgba(255,255,255,.35);
       --glow1: rgba(16,185,129,.16);
       --glow2: rgba(34,211,238,.10);
-      --date-filter: invert(1) opacity(.7);
       --shadow: rgba(0,0,0,.28);
       --radius: 18px;
     }
@@ -88,7 +87,6 @@
       --hatch: rgba(0,0,0,.30);
       --glow1: rgba(5,150,105,.10);
       --glow2: rgba(8,145,178,.07);
-      --date-filter: none;
       --shadow: rgba(20,40,32,.10);
     }
 
@@ -171,6 +169,20 @@
       outline: none;
     }
 
+    select {
+      -webkit-appearance: none; appearance: none;
+      cursor: pointer;
+      background-color: var(--input);
+      color: var(--text);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a948f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 11px;
+      padding-right: 34px;
+    }
+    select:hover { border-color: var(--hover-border); }
+    select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--accent-soft); }
+
     input[type="number"] {
       appearance: textfield;
       -moz-appearance: textfield;
@@ -183,7 +195,6 @@
     }
 
     input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: var(--date-filter);
       cursor: pointer;
     }
 
@@ -552,7 +563,8 @@
 
     .day-btn { background: transparent; border: none; color: var(--text); font: inherit; font-weight: 750; cursor: pointer; padding: 0; text-align: left; white-space: nowrap; }
     .day-btn:hover { color: var(--primary); transform: none; box-shadow: none; border: none; text-decoration: underline; }
-    .day-cell { display: flex; align-items: center; gap: 8px; }
+    .meal-col { text-align: center; width: 1%; white-space: nowrap; padding-left: 4px; padding-right: 4px; }
+    .meal-col .add-meal { margin: 0 auto; }
     .intake-btn { width: 100%; text-align: right; }
     .add-meal {
       display: inline-grid; place-items: center;
@@ -617,8 +629,8 @@
   <div class="wrap">
     <header>
       <div>
-        <h1>Weekly Calorie Tracker</h1>
-        <p class="subtitle">Intake vs. burn, week by week. Saved automatically to your database.</p>
+        <h1>Whittle</h1>
+        <p class="subtitle">Whittle it down — calories in vs. out, week by week.</p>
       </div>
 
       <div class="profile-wrap">
@@ -712,6 +724,7 @@
                 <option value="weight">Weight</option>
                 <option value="steps">Steps</option>
                 <option value="macros">Macros</option>
+                <option value="rings">Goal rings</option>
               </select>
               <select id="reportRange" aria-label="Range">
                 <option value="today">Today</option>
@@ -743,6 +756,7 @@
           <thead>
             <tr>
               <th>Day</th>
+              <th class="meal-col" aria-label="Meals"></th>
               <th>Calories eaten</th>
               <th>Protein g</th>
               <th>Carbs g</th>
@@ -1406,7 +1420,8 @@
       for (const r of rows) {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td class="day"><div class="day-cell"><button type="button" class="day-btn" data-date="${r.date}" title="View meals">${r.label}</button><button type="button" class="add-meal" data-date="${r.date}" title="Meals" aria-label="Meals"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M2.5 10C2.5 6 7 4 12 4s9.5 2 9.5 6Z"/><rect x="2.5" y="10.9" width="19" height="2.8" rx="1.4"/><path d="M3.2 15h17.6c0 2.6-3.8 4.2-8.8 4.2S3.2 17.6 3.2 15Z"/></svg></button></div></td>
+          <td class="day"><button type="button" class="day-btn" data-date="${r.date}" title="View meals">${r.label}</button></td>
+          <td class="meal-col"><button type="button" class="add-meal" data-date="${r.date}" title="Meals" aria-label="Meals"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M2.5 10C2.5 6 7 4 12 4s9.5 2 9.5 6Z"/><rect x="2.5" y="10.9" width="19" height="2.8" rx="1.4"/><path d="M3.2 15h17.6c0 2.6-3.8 4.2-8.8 4.2S3.2 17.6 3.2 15Z"/></svg></button></td>
           <td><button type="button" class="day-btn intake-btn" data-date="${r.date}" title="From meals — click to edit">${r.intake != null ? fmt(r.intake) : "—"}</button></td>
           <td><span class="muted-cell">${r.protein != null ? fmt(r.protein) : ""}</span></td>
           <td><span class="muted-cell">${r.carbs != null ? fmt(r.carbs) : ""}</span></td>
@@ -1664,8 +1679,52 @@
         drawWeight();
       } else if (type === "macros") {
         drawMacros();
+      } else if (type === "rings") {
+        drawRings();
       } else {
         drawIntakeBurn();
+      }
+
+      function drawRings() {
+        els.chartNote.textContent = "Goal rings" + (range === "today" ? " · today" : " · avg/day");
+        const SVGNS = "http://www.w3.org/2000/svg";
+        const mean = key => { const vs = data.map(b => b[key]).filter(v => v != null && Number.isFinite(v)); return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null; };
+        const t = macroTargets();
+        const rings = [
+          { label: "Deficit", val: mean("deficit"), target: num(state.settings.weeklyLossKg, 1) * 7700 / 7, unit: "kcal", color: "var(--good)" },
+          { label: "Steps", val: mean("steps"), target: num(state.settings.stepsGoal, 0) || null, unit: "", color: "var(--burn)" },
+          { label: "Protein", val: mean("protein"), target: t.protein, unit: "g", color: "var(--intake)" }
+        ];
+        setLegend(rings.map(r => swatch(r.color, r.label)).join(""));
+        const circle = (cx, cy, rr, stroke, w) => { const c = document.createElementNS(SVGNS, "circle"); c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", rr); c.setAttribute("fill", "none"); c.setAttribute("stroke", stroke); c.setAttribute("stroke-width", w); return c; };
+        const r = 78, sw = 18, C = 2 * Math.PI * r, cy = m.top + ih / 2 - 24;
+        rings.forEach((ring, i) => {
+          const cx = m.left + iw * (i + 0.5) / 3;
+          svg.appendChild(circle(cx, cy, r, col.grid, sw));
+          const has = ring.val != null && ring.target;
+          const frac = has ? Math.max(0, Math.min(1, ring.val / ring.target)) : 0;
+          const pct = has ? Math.round(ring.val / ring.target * 100) : null;
+          if (has && frac > 0) {
+            const off = C * (1 - frac);
+            const arc = circle(cx, cy, r, pct >= 100 ? "var(--good)" : ring.color, sw);
+            arc.setAttribute("stroke-linecap", "round");
+            arc.setAttribute("stroke-dasharray", C);
+            arc.setAttribute("stroke-dashoffset", off);
+            arc.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
+            const an = document.createElementNS(SVGNS, "animate");
+            an.setAttribute("attributeName", "stroke-dashoffset");
+            an.setAttribute("from", C); an.setAttribute("to", off);
+            an.setAttribute("dur", "0.8s"); an.setAttribute("fill", "freeze");
+            an.setAttribute("calcMode", "spline"); an.setAttribute("keyTimes", "0;1"); an.setAttribute("keySplines", "0.2 0.7 0.2 1");
+            arc.appendChild(an);
+            svg.appendChild(arc);
+          }
+          svg.appendChild(text(cx, cy + 11, pct != null ? pct + "%" : "—", "middle", "32", col.text, "800"));
+          svg.appendChild(text(cx, cy + r + 28, ring.label, "middle", "14", col.text, "700"));
+          const sub = has ? `${fmt(Math.round(ring.val))} / ${fmt(Math.round(ring.target))}${ring.unit ? " " + ring.unit : ""}`
+            : (ring.target ? "no data" : "set a goal");
+          svg.appendChild(text(cx, cy + r + 48, sub, "middle", "12", col.muted));
+        });
       }
 
       function drawSingle(o) {

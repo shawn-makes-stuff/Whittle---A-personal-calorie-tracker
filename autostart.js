@@ -36,7 +36,7 @@ export function enable() {
   } else if (isLinux) {
     mkdirSync(dirname(DESKTOP), { recursive: true });
     writeFileSync(DESKTOP,
-      `[Desktop Entry]\nType=Application\nName=Calorie Tracker\n` +
+      `[Desktop Entry]\nType=Application\nName=Whittle\n` +
       `Exec="${process.execPath}" "${TRAY}"\nTerminal=false\nX-GNOME-Autostart-enabled=true\n`);
   } else {
     console.log('Autostart is not supported on this platform.');

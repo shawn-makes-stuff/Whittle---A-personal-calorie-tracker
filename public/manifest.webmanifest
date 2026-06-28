@@ -1,7 +1,8 @@
 {
   "id": "/",
-  "name": "Calorie Tracker",
-  "short_name": "Calories",
+  "name": "Whittle",
+  "short_name": "Whittle",
+  "description": "Whittle it down — a private weekly calorie & macro tracker.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

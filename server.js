@@ -55,6 +55,6 @@ app.delete('/api/meals/:id', (req, res) => { store.deleteMeal(Number(req.params.
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Calorie tracker: http://localhost:${PORT}`);
+  console.log(`Whittle: http://localhost:${PORT}`);
   warmUp(); // prime the AI so the first request is quick
 });
