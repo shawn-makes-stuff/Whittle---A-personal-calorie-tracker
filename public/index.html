@@ -476,9 +476,11 @@
     .chat-sidebar.collapsed { display: none; }
     .chat-side-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 12px 8px; }
     .chat-side-head strong { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-    .chat-side-actions { display: flex; gap: 4px; }
-    .chat-side-close { display: none; }
+    .chat-side-close { display: none; background: transparent; border: none; color: var(--muted); font-size: 22px; line-height: 1; padding: 0 4px; cursor: pointer; }
+    .chat-side-close:hover { background: transparent; border: none; color: var(--text); transform: none; box-shadow: none; }
     .chat-scrim { display: none; }
+    .chat-new { color: var(--primary); font-weight: 700; margin-bottom: 4px; }
+    .chat-new-ico { font-size: 15px; }
     .chat-list { flex: 1; overflow-y: auto; padding: 4px 8px 10px; display: flex; flex-direction: column; gap: 3px; scrollbar-width: thin; scrollbar-color: var(--card-border) transparent; }
     .chat-item { display: flex; align-items: center; gap: 6px; padding: 9px 10px; border-radius: 9px; cursor: pointer; }
     .chat-item:hover { background: var(--panel); }
@@ -770,10 +772,7 @@
         <aside class="chat-sidebar" id="chatSidebar">
           <div class="chat-side-head">
             <strong>Chats</strong>
-            <div class="chat-side-actions">
-              <button id="chatNew" type="button" class="chat-tool-btn" title="New chat" aria-label="New chat">＋</button>
-              <button id="chatSideClose" type="button" class="chat-tool-btn chat-side-close" title="Close" aria-label="Close conversations">×</button>
-            </div>
+            <button id="chatSideClose" type="button" class="chat-side-close" title="Close" aria-label="Close conversations">×</button>
           </div>
           <div class="chat-list" id="chatList"></div>
         </aside>
@@ -958,7 +957,6 @@
       chatSend: document.getElementById("chatSend"),
       chatSidebar: document.getElementById("chatSidebar"),
       chatList: document.getElementById("chatList"),
-      chatNew: document.getElementById("chatNew"),
       chatToggle: document.getElementById("chatToggle"),
       chatSideClose: document.getElementById("chatSideClose"),
       chatScrim: document.getElementById("chatScrim"),
@@ -1120,10 +1118,10 @@
       els.chatList.addEventListener("click", e => {
         const del = e.target.closest(".chat-item-del");
         if (del) { e.stopPropagation(); return deleteChat(del.dataset.id); }
+        if (e.target.closest(".chat-new")) return newChat();
         const item = e.target.closest(".chat-item");
         if (item) openSession(item.dataset.id);
       });
-      els.chatNew.addEventListener("click", newChat);
       els.chatToggle.addEventListener("click", () => els.chatSidebar.classList.toggle("collapsed"));
       els.chatSideClose.addEventListener("click", () => els.chatSidebar.classList.add("collapsed"));
       els.chatScrim.addEventListener("click", () => els.chatSidebar.classList.add("collapsed"));
@@ -1219,7 +1217,8 @@
     }
 
     function renderSessionList(sessions) {
-      els.chatList.innerHTML = sessions.map(s => `
+      const newRow = `<div class="chat-item chat-new" data-new="1"><span class="chat-new-ico">＋</span> New chat</div>`;
+      els.chatList.innerHTML = newRow + sessions.map(s => `
         <div class="chat-item ${s.id === currentSession ? "active" : ""}" data-id="${s.id}">
           <span class="chat-item-title">${escapeHtml(s.title || "New chat")}</span>
           <button class="chat-item-del" data-id="${s.id}" type="button" title="Delete" aria-label="Delete">×</button>
