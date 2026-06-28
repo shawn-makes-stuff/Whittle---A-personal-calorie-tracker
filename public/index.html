@@ -2284,15 +2284,14 @@
           if (has && raw > 0) mkArc(Math.min(1, raw));
           if (has && over > 0.002) {                  // overshoot end laps over the start
             mkArc(over);
-            // Shadow only the leading end: a half-disc cap following the curve (reads as one end overlapping).
-            const td = (-90 + over * 360) * Math.PI / 180, r2 = sw / 2;
-            const tx = cx + rad * Math.cos(td), ty = cyc + rad * Math.sin(td);
-            const ux = Math.cos(td), uy = Math.sin(td);
-            const cap = document.createElementNS(SVGNS, "path");
-            cap.setAttribute("d", `M ${tx + ux * r2} ${ty + uy * r2} A ${r2} ${r2} 0 0 1 ${tx - ux * r2} ${ty - uy * r2} Z`);
-            cap.setAttribute("fill", ring.color);
-            cap.style.filter = "drop-shadow(0 2px 3px rgba(0,0,0,.65))";
-            svg.appendChild(cap);
+            // Shadow only the last bit of the overshoot so the leading end casts a soft overlap shadow (no hard edge).
+            const segFrac = Math.min(over, 0.06), a0 = over - segFrac, C = 2 * Math.PI * rad;
+            const seg = circle(cx, cyc, rad, ring.color, sw);
+            seg.setAttribute("stroke-linecap", "round");
+            seg.setAttribute("stroke-dasharray", `${segFrac * C} ${C}`);
+            seg.setAttribute("transform", `rotate(${-90 + a0 * 360} ${cx} ${cyc})`);
+            seg.style.filter = "drop-shadow(0 1px 3px rgba(0,0,0,.55))";
+            svg.appendChild(seg);
           }
           // Percentage sits just past the leading end (breathing room), rotated to follow the curve.
           const pct = has ? Math.round(raw * 100) : null;
